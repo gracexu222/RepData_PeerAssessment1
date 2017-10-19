@@ -1,0 +1,125 @@
+---
+title: "𝙿𝙰𝟷_𝚝𝚎𝚖𝚙𝚕𝚊𝚝𝚎"
+author: "Grace Xu"
+date: "10/17/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Analysis of personal activity monitoring device data
+
+### Introduction
+
+It is now possible to collect a large amount of data about personal movement using activity monitoring devices such as a Fitbit, Nike Fuelband, or Jawbone Up. These type of devices are part of the “quantified self” movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. But these data remain under-utilized both because the raw data are hard to obtain and there is a lack of statistical methods and software for processing and interpreting the data.
+
+In this report we make use of data from a personal activity monitoring device. This device collects data at 5 minute intervals through out the day. The data consists of two months of data from an anonymous individual collected during the months of October and November, 2012 and include the number of steps taken in 5 minute intervals each day. Data was provided for the course students for this particular assignment, avaliable to download via this link (avaliable at 2014-05-25).
+
+In the report, we try to answer the following questions:
+
+* What is mean total number of steps taken per day?
+* What is the average daily activity pattern?
+* Are there differences in activity patterns between weekdays and weekends?
+
+##Loading and preprocessing the data
+
+In the first step, we load the data into R environment from the CSV file in the working directory.
+
+```{r}
+
+```
+
+The data is in an appropriate form for further analysis and thus it needs no more transformation at this point.
+
+##What is mean total number of steps taken per day?
+
+We are interested in what is mean total number of steps taken per day. We begin with plotting a histogram of the total number of steps taken each day. Please note that for this part of the analysis, we ignore the missing values in the dataset.
+
+##Loading and preprocessing the data
+
+In the first step, we load the data into R environment from the CSV file in the working directory.
+
+##What is mean total number of steps taken per day?
+
+We are interested in what is mean total number of steps taken per day. We begin with plotting a histogram of the total number of steps taken each day. Please note that for this part of the analysis, we ignore the missing values in the dataset.
+
+
+```{r}
+
+data<- read.csv("activity.csv",header=TRUE,sep =",",na.strings="NA")
+summary(data)
+str(data)
+head(data)
+data$date<- as.Date(data$date,format ="%Y-%m-%d")
+data$interval<- factor(data$interval)
+NA_index<- is.na(as.character(data$steps))
+data_no_NA<- data[!NA_index,]
+head(data_no_NA)
+
+steps_each_day<- aggregate(steps ~ date,data = data_no_NA,sum)
+colnames(steps_each_day)<- c("date","steps")
+hist(as.numeric(steps_each_day$steps), breaks = 20, col = "red", xlab = "Number of Steps", main= "Histogram of the total number of steps taken each day")
+
+mean(steps_each_day$steps)
+median(steps_each_day$steps)
+```
+
+
+##What is the average daily activity pattern?
+
+We are also intrested in the daily activity pattern. We investigate it by observing the average number of steps taken for subsequent day 5-minute intervals, averaged across all days. This pattern is presented on the plot below.
+```{r}
+steps_per_interval <- aggregate(data_no_NA$steps, by=list(interval=data_no_NA$interval), FUN=mean)
+colnames(steps_per_interval) <- c("interval", "average_steps")
+plot(as.integer(levels(steps_per_interval$interval)), steps_per_interval$average_steps, type="l",
+     xlab = "Interval", ylab = "Average Number of Steps", main = "Average Daily Activity Pattern",  col ="blue")
+max_steps <- max(steps_per_interval$average_steps)
+max_steps
+intervale_max_steps<-steps_per_interval[which.max(steps_per_interval$average_steps),]$interval
+intervale_max_steps
+```
+
+```{r}
+sum(is.na(as.character(data$steps)))
+sum(is.na(as.character(data$date)))
+sum(is.na(as.character(data$interval)))
+NA_index <- which(is.na(as.character(data$steps)))
+complete_data <- data
+
+complete_data[NA_index, ]$steps<-unlist(lapply(NA_index, FUN=function(NA_index){
+        steps_per_interval[data[NA_index,]$interval==steps_per_interval$interval,]$average_steps
+}))
+
+summary(complete_data)
+str(complete_data)
+
+steps_each_day_complete <- aggregate(steps ~ date, data = complete_data, sum)
+colnames(steps_each_day_complete) <- c("date", "steps")
+hist(as.numeric(steps_each_day_complete$steps), breaks = 20, col = "red", xlab = "Number of Steps", main= "Histogram of the total number of steps taken each day")
+
+mean(steps_each_day_complete$steps)
+median(steps_each_day_complete$steps)
+
+```
+```{r}
+complete_data$day <- as.factor(weekdays(complete_data$date))
+complete_data$is_weekday <- ifelse(!(complete_data$day %in% c("Saturday","Sunday")), TRUE, FALSE) 
+weekdays_data <- complete_data[complete_data$is_weekday,]
+steps_per_interval_weekdays <- aggregate(weekdays_data$steps, by=list(interval=weekdays_data$interval), FUN=mean)
+
+weekends_data <- complete_data[!complete_data$is_weekday,]
+steps_per_interval_weekends <- aggregate(weekends_data$steps, by=list(interval=weekends_data$interval), FUN=mean)
+colnames(steps_per_interval_weekdays) <- c("interval", "average_steps")
+colnames(steps_per_interval_weekends) <- c("interval", "average_steps")
+steps_per_interval_weekdays$day <- "Weekday"
+steps_per_interval_weekends$day <- "Weekend"
+week_data <- rbind(steps_per_interval_weekends, steps_per_interval_weekdays)
+week_data$day <- as.factor(week_data$day)
+
+library(lattice)
+xyplot(average_steps ~  interval | day, data = week_data, layout = c(1,2), type ="l", ylab="Number of Steps")
+
+```
+
